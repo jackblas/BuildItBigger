@@ -137,3 +137,79 @@ Once you have a functioning project, consider adding more features to test your 
 * Make the free app variant display interstitial ads between the main activity and the joke-displaying activity.
 * Have the app display a loading indicator while the joke is being fetched from the server.
 * Write a Gradle task that starts the GCE dev server, runs all the Android tests, and shuts down the dev server.
+
+# Project Changes Summary
+
+* Step 1: Create a Java library
+* Step 2: Create an Android Library
+* Step 3: Create GCE Module
+* Step 4: Add Functional Tests
+* Step 5: Add a Paid Flavor
+
+Optional Tasks
+* Add Interstitial Ad
+* Add Loading Indicator
+* Configure Test Task
+
+
+### Project Modules
+
+#### Module app:
+Main application module with three soure sets.
+
+*Souce set main/*<br />
+MainActivity - container activity for MainActivityFragment<br />
+JokerAsyncTask - an Async task to retrieve jokes from the GCE server<br />
+
+*Souce set free/*<br />
+	MainActivityFragment - loads an interstatil ad. Executes JokerAsyncTask.<br />
+	AndroidManifest - includes meta-data tag is required to use Google Play Services<br />
+
+*Souce set paid/*<br />
+	MainActivityFragment - paid version without an interstitial ad.<br />
+
+*settings.gradle* - include all modules of the project:
+
+	include ':app', ':jokesjavalib', ':jokesandroidlib', ':jokeserver'
+
+
+*build.gradle*<br />
+
+Declared project dependency between Android app and Java lib jokesjavalib.<br />
+Declared project dependency between Android app and module lib jokesandroidlib.<br />
+Declared project dependency between Android app and the backend.<br />
+Declared Unit test dependencies.<br />
+Configured Test Task: runTestsInLocalServer.<br />
+
+#### Module jokesjavalib:
+A Java library that provides jokes.
+
+#### Module jokesandroidlib:
+Android Library containing an Activity that will display a joke passed to it as an intent extra.
+
+#### Module jokerserver:
+A GCE development server. Exposes an enpoint method that returns a joke as a String.<br />
+
+*build.gradle* 
+
+	Declared project dependency between server module and the Java lib
+	Modified to make the development server to listen to external connections:
+
+        appengine {
+            ...
+            //Make your development server to listen to external connections:
+            httpAddress = "0.0.0.0"
+        }
+
+### Instrumented Functional Tests (androidTest folder)
+Addedd a JUnit class and JokerAsyncTaskTest to test that the Async task successfully retrieves a non-empty string.<br/>
+
+Created a Gradle task that:
+1. Launches the GCE local development server (in Daemon mode, so it doesn't block further execution)
+2. Runs all tests
+3. Shuts the server down again
+
+**NOTE:** Before executing the test task, connect a physical device or start a AVD.<br />
+
+Run Test Task
+:app Task > other > runTestsInLocalServer
