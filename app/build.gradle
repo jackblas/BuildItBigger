@@ -2,7 +2,7 @@ apply plugin: 'com.android.application'
 
 android {
     compileSdkVersion 25
-    buildToolsVersion '25.0.0'
+    buildToolsVersion '25.0.2'
 
     defaultConfig {
         applicationId "com.udacity.gradle.builditbigger"
@@ -18,6 +18,18 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+    productFlavors {
+        free {
+            applicationId "com.udacity.gradle.builditbigger.free"
+            versionNameSuffix "-free"
+
+        }
+        paid {
+            applicationId "com.udacity.gradle.builditbigger.paid"
+            versionNameSuffix "-paid"
+
+        }
+    }
 }
 
 dependencies {
@@ -25,6 +37,63 @@ dependencies {
     androidTestCompile('com.android.support.test.espresso:espresso-core:2.2.2', {
         exclude group: 'com.android.support', module: 'support-annotations'
     })
-    compile 'com.android.support:appcompat-v7:25.0.0'
-    compile 'com.google.android.gms:play-services-ads:9.8.0'
+    compile 'com.android.support:appcompat-v7:25.3.1'
+    //Free flavor dependency
+    freeCompile 'com.google.android.gms:play-services-ads:10.2.1'
+    //Added libs dependencies
+    compile project (':jokesjavalib')
+    compile project (':jokesandroidlib')
+    //Backend dependencies
+    compile 'com.google.api-client:google-api-client-android:1.22.0' exclude module: 'httpclient'
+    compile 'com.google.code.findbugs:jsr305:2.0.1'
+    compile project(path: ':jokeserver', configuration: 'android-endpoints')
+
+    // Local Unit test dependencies
+    testCompile 'junit:junit:4.12'
+
+    // Instrumental Unit test dependencies
+    androidTestCompile 'com.android.support:support-annotations:25.3.1'
+    androidTestCompile 'com.android.support.test:runner:0.5'
+    androidTestCompile 'com.android.support.test:rules:0.5'
+
 }
+
+// Configure Test Task
+// 1. Launches the GCE local development server (in Daemon mode, so it doesn't block further execution)
+// 2. Runs all tests
+// 3. Shuts the server down again
+
+// Reference: https://stackoverflow.com/questions/31434928/android-gradle-task-google-appengine
+task runTestsInLocalServer {
+
+    dependsOn = ['startJokeServer', 'runTests', 'stopJokeServer']
+
+}
+
+task startJokeServer(dependsOn: ':jokeserver:appengineRun') {
+
+    project(':jokeserver').afterEvaluate { backend ->
+        backend.extensions.appengine.daemon = true
+    }
+    doLast {
+
+        println 'Test Task Step 1: Joke Server running...'
+    }
+}
+
+task runTests(dependsOn: 'connectedAndroidTest'){
+    shouldRunAfter 'startJokeServer'
+    doLast{
+        println 'Test Task Step 2: Completed connected test.'
+    }
+}
+
+task stopJokeServer(dependsOn: ':jokeserver:appengineStop'){
+    mustRunAfter 'runTests'
+    doLast {
+        println 'Test Task Step 3: Joke Server stopped.'
+    }
+}
+
+runTests.shouldRunAfter startJokeServer
+runTests.finalizedBy stopJokeServer
